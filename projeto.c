@@ -7,26 +7,27 @@
 #include <locale.h>
 #include <unistd.h>
 
-
 #include "projeto.h"
 #include "files.h"
+#include "cores.h"
 
 int obter_time_grupos(Time *t[], Time *grupos, Chave *chaves, int jogos_realizados);
 void obter_time_copa(Time *t[], Time *times, Fase fase_atual, Chave *chaves, int jogos_realizados);
 void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves);
 void swap_pelo_terceiro(Time *times);
-int times_restantes(Fase fase_atual);
 void parear_times_eliminatorias(Time *times, Chave *chaves, int *jogos_pareados);
+int dias_mes(int mes);
+void update_data(Horario *data);
 int qsort_ranquear_grupos(const void *p, const void *q);
 int compara_ranque(const Time *t1, const Time *t2);
-void update_ranque(Id vencedor, Id perdedor, Time *times);
+void insertion_sort(Time *times, size_t size);
 bool validar_data(Horario *data);
 void randomizar_times_grupos(Time *grupos, Chave *chaves);
 void visualizar_grupos(Jogo *jogos, const Info *copa, Time *grupos);
 void visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lista);
 void visualizar_ranque(const Time *times, const Info *copa);
 void marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase);
-bool escolher_estadio(int jogos_realizados, char *jogo_atual_local);
+void escolher_estadio(int jogos_realizados, char *jogo_atual_local);
 void checar_transicao_proxima_fase(Time *times, Info *copa, Chave *chaves);
 Resultado jogar_jogo(Time *t1, Time *t2, Fase fase);
 Time *pesquisar_time_ptr(Time *times, Id id, size_t size);
@@ -53,8 +54,7 @@ main(void)
     	Time grupos[MAX_TIMES];
 	Chave chaves[MAX_JOGOS];
 
-    	Info copa = {0, 0, 0, {1, 1, 12, 30}};
-    	Jogo jogos[MAX_JOGOS];
+    	Info copa = {0, 0, 0, {1, 1, 12, 30}}; Jogo jogos[MAX_JOGOS];
 
     	srand((unsigned)time(NULL));
     	limpar_tela();
@@ -70,18 +70,39 @@ main(void)
 	puts("------------------------------------------------------------------------------------------------------------------------------");
 
 	 for (;;) {
+		if (copa.times_cadastrados == MAX_TIMES) 
+			red();
+		else
+			bold_yellow();
 		puts("1 - Cadastrar times");
+		reset();
+		if (copa.times_classificados == 0)
+			white();
 	    	puts("2 - Visualizar ranque");
+		reset();
+		if (copa.jogos_realizados == 0)
+			white();
     		puts("3 - Visualizar jogos");
+		reset();
+		if (copa.times_cadastrados == 0)
+			white();
 		puts("4 - Visualizar Grupos");
-	    	puts("5 - Marcar jogo");
+		reset();
+		if (copa.times_cadastrados < MAX_TIMES || copa.jogos_realizados == MAX_JOGOS)
+			red();
+		else
+			bold_yellow();
+		puts("5 - Marcar jogos");
+		reset();
     		puts("6 - Sair do programa");
 	
 		char input_str[3];
 		int op;
 
-		fgets_(input_str, 3, stdin);
+		bold_yellow();
+		fgets_(input_str, 2, stdin);
 		sscanf(input_str, "%d", &op);
+		reset();
 		limpar_tela();
 
 		switch (op) {
@@ -104,7 +125,9 @@ main(void)
 			exit(EXIT_SUCCESS);
 			break;
 		default:
-			puts("\nOpção inválida");
+			bold_red();
+			puts("Opção inválida");
+			reset();
 			break;
 		}
 	 }
@@ -118,22 +141,9 @@ obter_time_grupos(Time *t[], Time *grupos, Chave *chaves, int jogos_realizados)
 	t[1] = pesquisar_time_ptr(grupos, chaves[jogos_realizados].t2, MAX_TIMES);
 
 	int grupo  = t[0] - grupos;
-	while (grupo % MAX_TIMES_GRUPO != 0)
-		--grupo;
+	grupo -= (grupo % MAX_TIMES_GRUPO);
 
 	return grupo;
-}
-
-int
-times_restantes(Fase fase_atual)
-{
-	int times_restantes = MAX_RANQUE_TIMES;
-
-	while (fase_atual > OITAVAS) {
-		--fase_atual;
-		times_restantes /= 2;
-	}
-	return times_restantes;
 }
 
 void
@@ -184,9 +194,7 @@ marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves)
 		if (fase_atual == PELO_TERCEIRO) {
 			swap_pelo_terceiro(times);
 		} else {
-			update_ranque(jogos[copa->jogos_realizados].resultado.vencedor,
-			              jogos[copa->jogos_realizados].resultado.perdedor,
-				      times);
+			insertion_sort(times, MAX_RANQUE_TIMES);
 		}
 		if (fase_atual == FINAL) {
 			times[TERCEIRO].status = times[QUARTO].status = PENDENTE;
@@ -198,28 +206,6 @@ marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves)
 	marcar_jogo_dados(copa, jogos, fase_atual);
 	checar_transicao_proxima_fase(times, copa, chaves);
 	copa->jogos_realizados++;
-}
-
-void
-update_ranque(Id vencedor, Id perdedor, Time *times)
-{
-	Time *pivot = pesquisar_time_ptr(times, vencedor, MAX_RANQUE_TIMES) - 1;
-	Time t = *(pivot + 1);
-
-	while (pivot >= &times[0] && compara_ranque(&t, pivot) < 0) {
-		*(pivot + 1) = *pivot;
-		--pivot;
-	}
-	*(pivot + 1) = t;
-
-	pivot = pesquisar_time_ptr(times, perdedor, MAX_RANQUE_TIMES) + 1;
-	t = *(pivot - 1);
-
-	while (pivot < &times[MAX_RANQUE_TIMES] && compara_ranque(&t, pivot) > 0) {
-		*(pivot - 1) = *pivot;
-		++pivot;
-	}
-	*(pivot - 1) = t;
 }
 
 int 
@@ -281,10 +267,8 @@ qsort_ranquear_grupos(const void *p, const void *q)
 bool
 validar_data(Horario *data)
 {
-	const int dias[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-	
 	return data->horas >= 0 && data->horas < 24  && data->minutos >= 0 && data->minutos < 60
-	&& data->mes >= 1 && data->mes <= 12 && data->dia >= 1 && data->dia <= dias[data->mes - 1];
+	       && data->mes >= 1 && data->mes <= 12 && data->dia >= 1 && data->dia <= dias_mes(data->mes);
 }
 
 
@@ -318,13 +302,16 @@ visualizar_grupos(Jogo *jogos, const Info *copa, Time *grupos)
 
 	for (int i = 0; i < NUM_GRUPOS; i++) {
 		int grupo = i * MAX_TIMES_GRUPO;
-
+		white();
 		puts("-----------------------------------------------------------------------------------");
 		printf("                                    Grupo %c\n", grupo_letra++);
 		puts("-----------------------------------------------------------------------------------");
-		puts("Id   Time                  Vitórias  Derrotas  Empates  Gols  Gols sofridos  Pontos\n");
+		reset();
+		puts("\e[090mId   Time\e[0m                  \e[1;36mVitórias  \e[1;31mDerrotas\e[0m  \e[1;33mEmpates  "
+		     "\e[1;36mGols  \e[1;31mGols sofridos  \e[1;32mPontos\e[0m\n");
 		for (int j = grupo; j < grupo + MAX_TIMES_GRUPO && j < copa->times_cadastrados; ++j) {
-			printf("%-2d   %-24s %-2d       %-2d         %-2d     %-2d       %-2d           %-2d\n",
+			printf("%-2d   \e[1;34m%-24s \e[1;36m%-2d        \e[1;31m%-2d        \e[1;33m%-2d     "
+			       "\e[1;36m%-2d        \e[1;31m%-2d          \e[1;32m%-2d\e[0m\n",
 			       grupos[j].id, grupos[j].nome, grupos[j].vitorias, grupos[j].derrotas,
 			       grupos[j].empates, grupos[j].gols, grupos[j].gols_sofridos, 
 			       grupos[j].pontos);
@@ -332,49 +319,58 @@ visualizar_grupos(Jogo *jogos, const Info *copa, Time *grupos)
 	}
 
 	puts("Digite sair para voltar ao menu principal");
+	bold_yellow();
 	while (!confirmar_resposta())
 		continue;
+	reset();
 	limpar_tela();
 }
 
 void
 visualizar_ranque(const Time *times, const Info *copa)
 {
-	const char *STATUS[] = {"Eliminado", "Pendente", "Passou", "Campeão"};
+	const char *STATUS[] = {"\e[0;31mEliminado\e[0m", "\e[1;33mPendente\e[0m", "\e[0;32mPassou\e[0m", "\e[1;36mCampeao\e[0m"};
 	const char *FASES_NOMES[MAX_FASES + 1] = {"Grupos", "Oitavas de final", "Quartas de final",
 	                                          "Semi Final", "Final", "Competição pelo terceiro lugar", "Fim da copa"};
 
+	white();
 	puts("------------------------------------------------------------------------------------------------------------------------------");
 	puts("                                                           Ranque da Copa");
 	puts("------------------------------------------------------------------------------------------------------------------------------");
 	printf("                                                          %s\n", FASES_NOMES[calcular_fase(copa->jogos_realizados)]);
 	puts("------------------------------------------------------------------------------------------------------------------------------");
 
-	printf("        ID      Times                           Status                "
-	"Vitórias  Derrotas Gols  Gols sofridos"); 
+	printf("        ID      Times                           Status\e[0m                "
+	"\e[1;32mVitórias\e[0m  \e[1;31mDerrotas\e[0m     \e[1;32mGols\e[0m        \e[1;31mGols sofridos\e[0m"); 
 	printf("\n");
 	for (int i = 0; i < copa->times_classificados; ++i) {
-		printf("%2d°     %-2d     %-24s       %-15s            %-2d        "
-		"%-2d     %-2d        %-2d \n", i + 1, times[i].id,
+		printf("%2d°     %-2d     \e[1;34m%-24s\e[0m       %-26s            \e[1;32m%-2d        "
+		"\e[0;31m%-2d         \e[0;32m%-2d              \e[1;31m%-2d\e[0m \n", i + 1, times[i].id,
 		times[i].nome, STATUS[times[i].status], times[i].vitorias, times[i].derrotas,
 		times[i].gols, times[i].gols_sofridos);
 	}
+	bold_red();
 	if (copa->times_classificados == 0)
-		puts("\n                                                "
-		     "Nenhum time foi classificado para as oitavas ainda");
+		puts("\n\n                                                "
+		     "Nenhum time foi classificado para as oitavas ainda\n");
+	reset();
 
 	printf("Digite sair para voltar ao menu principal:  ");
+	bold_yellow();
 	while (!confirmar_resposta())
 		continue;
+	reset();
 	limpar_tela();
 }
 
 void
 visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lista)
 {
-	const char *FASES_NOMES[MAX_FASES] = {"Grupos", "Oivatas", "Quartas", "Semi Final", "Final", "Pelo 3°"};
+	const char *FASES_NOMES[MAX_FASES] = {"Grupos", "Oivatas", "Quartas", "Semi Final", "Final", "Pelo 3"};
 
+	white();
 	puts("   ID      Fase        Dia      Horario                 Vencedor  Placar  Perdedor                 Estádio             Penalty");
+	reset();
 
 	for (int i = 0; i < copa->jogos_realizados; ++i) {
 		if ((pesquisar_time_ptr(times_lista, jogos[i].resultado.vencedor, MAX_TIMES)) == NULL) {
@@ -385,50 +381,81 @@ visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lis
 			puts("\n\n\nerror do 2");
 			exit(1);
 		}
-		printf("\n   %-2d     %-11s %.2d/%.2d     %.2d:%.2d   %24.24s %2d x %-2d  %-24.24s %-18.18s",
-				jogos[i].id, FASES_NOMES[jogos[i].fase], jogos[i].data.dia,
-				jogos[i].data.mes, jogos[i].data.horas, jogos[i].data.minutos,
-				pesquisar_time_ptr(times_lista, jogos[i].resultado.vencedor, MAX_TIMES)->nome,
-				jogos[i].resultado.placar.vencedor, jogos[i].resultado.placar.perdedor,
-				pesquisar_time_ptr(times_lista, jogos[i].resultado.perdedor, MAX_TIMES)->nome,
-				jogos[i].local);
+		
+		char *color_t1, *color_t2;
+		
+		if (jogos[i].resultado.empate) {
+			color_t1 = color_t2 = "\e[1;33m";
+		} else {
+			color_t1 = "\e[1;36m";
+			color_t2 = "\e[1;31m";
+		}
 
+		printf("\n   %-2d", jogos[i].id);
+		printf("    %-11s", FASES_NOMES[jogos[i].fase]);
+		printf(" %2d/%-2d", jogos[i].data.dia, jogos[i].data.mes);
+		printf("    %.2d:%.2d", jogos[i].data.horas, jogos[i].data.minutos);
+		printf("    %s%24.24s\e[0m", color_t1,
+		       pesquisar_time_ptr(times_lista, jogos[i].resultado.vencedor, MAX_TIMES)->nome);
+		printf(" %2d x %-2d", jogos[i].resultado.placar.vencedor, jogos[i].resultado.placar.perdedor);
+		printf("  %s%-24.24s\e[0m", color_t2,
+		       pesquisar_time_ptr(times_lista, jogos[i].resultado.perdedor, MAX_TIMES)->nome);
+		printf("  %-18.18s", jogos[i].local);
+
+		bold_yellow();
 		if (jogos[i].resultado.estagio >= PENALTY)
 			printf("  Sim");
 		if (jogos[i].resultado.empate)
 			printf("  Empate");
+		reset();
 	}
+
+	bold_red();
 	if (copa->jogos_realizados == 0)
 		puts("\n                                                        Nenhum jogo foi Realizado ainda");
+	reset();
 
 	printf("\nDigite sair para voltar ao menu principal:  ");
+	bold_yellow();
 	while (!confirmar_resposta())
 		continue;
+	reset();
 	limpar_tela();
 }
+
 void
 marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
 {
 	Jogo *jogo_atual = &jogos[copa->jogos_realizados];
 	Horario data;
 
-	#ifdef DEBUG
-		data = copa->ultima_data;
-		data.dia++;
-		strcpy(jogos[copa->jogos_realizados].local, "debug");
-		goto fora;
-	#endif
+#ifdef AUTO
+	char *estadios[12] = {"Arena", "Maracana", "Mane Garrincha", "Morumbi",
+       	                      "Castelao", "Mineirao", "Arruda", "Alena do Gremio",
+			      "Parque do Sabia", "Albertao", "Beira-Rio", "Mangueirao"};
+	data = copa->ultima_data;
+	update_data(&data);
+	strcpy(jogos[copa->jogos_realizados].local, estadios[rand() % 12]);
+#endif
 
+
+
+#ifndef AUTO
 	for (;;) {
 		char input_str[10];
 
 		printf("Escolha a data em que deseja fazer o jogo (dd/mm): ");
+		bold_yellow();
 		fgets_(input_str, 9, stdin);
 		sscanf(input_str,"%d /%d", &data.dia, &data.mes);
+		reset();
 		printf("Escolha o horário em que o jogo aconteceu (hh:mm): ");
+		bold_yellow();
 		fgets_(input_str, 9, stdin);
+		reset();
 		sscanf(input_str, "%2d :%2d", &data.horas, &data.minutos);
 		if (!validar_data(&data)) {
+			red();
 			mensagem("Essa data não é válida\n");
 			continue;
 		}
@@ -437,15 +464,15 @@ marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
 
 		if ((horas_diferenca >= 0 || abs(horas_diferenca) <= 12)
 		    && copa->jogos_realizados > 0) {
+			red();
 			mensagem("Essa data já passou ou está muito próxima do último jogo\n");
 			continue;
 		}
 		break;
 	}
 
-	while (!escolher_estadio(copa->jogos_realizados, jogo_atual->local))
-			continue;
-	fora:
+	escolher_estadio(copa->jogos_realizados, jogo_atual->local);
+#endif
 
 	copa->ultima_data = data;
 	jogo_atual->data = data;
@@ -454,7 +481,34 @@ marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
 	limpar_tela();
 }
 
-bool
+void 
+update_data(Horario *data)
+{
+	data->dia += rand() % 3 + 1;
+
+	int dias_mes_data = dias_mes(data->mes);
+
+	if (data->dia > dias_mes_data) {
+		data->dia -= dias_mes_data;
+		++data->mes;
+	}
+		
+	const int minutos[6] = {10, 15, 20, 25, 30, 45};
+	
+	data->horas = rand() % 24;
+	data->minutos = minutos[rand() % 6];
+}
+
+
+int 
+dias_mes(int mes)
+{
+	const int dias[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+	return dias[mes - 1];
+}
+
+void
 escolher_estadio(int jogos_realizados, char *jogo_atual_local)
 {
 	char buff[MAX_NAME_LEN + 1];
@@ -464,20 +518,28 @@ escolher_estadio(int jogos_realizados, char *jogo_atual_local)
 	int num_estadios = abrir_lista(estadios, MAX_LISTA_LEN, "estadios.txt");
 
 	for (int i = 0; i < num_estadios; ++i)
-		printf("%d - %s\n", i, estadios[i]);
+		printf("\e[1;32m%d\e[0m - \e[1;34m%s\e[0m\n", i, estadios[i]);
 
-	if (num_estadios > 0) {
-		printf("Digite um nome de estádio ou digite um dos ids acima: ");
-		fgets_(buff, MAX_NAME_LEN, stdin);
-		if (!obter_nome_por_id(buff, num_estadios, estadios))
-			return false;
-	} else {
-		printf("Digite o nome do estádio: ");
-		fgets_(buff, MAX_NAME_LEN, stdin);
+	for (;;) {
+		if (num_estadios > 0) {
+			printf("Digite um nome de estádio ou digite um dos ids acima: ");
+			bold_yellow();
+			fgets_(buff, MAX_NAME_LEN, stdin);
+			reset();
+			if (!obter_nome_por_id(buff, num_estadios, estadios))
+				continue;
+		} else {
+			printf("Digite o nome do estádio: ");
+			bold_yellow();
+			fgets_(buff, MAX_NAME_LEN, stdin);
+			reset();
+		}
+		break;
 	}
 
 	strcpy(jogo_atual_local, buff);
-	return true;
+	reset();
+
 }
 
 void
@@ -507,53 +569,74 @@ jogar_jogo(Time *t1, Time *t2, Fase fase)
 	unsigned t1_gols;
 	unsigned t2_gols;
 
-	#ifdef DEBUG 
-	t1_gols = rand() % 5;
-	t2_gols = rand() % 5;
-	if (t1_gols == t2_gols)
-		t1_gols++;
-	printf("Time %s vs %s", t1->nome, t2->nome);
-	goto fora2;
-	#endif
-
-	printf("Digite quantos gols o time %s fez: ", t1->nome);
-	fgets_(input_str, 3, stdin);
-	sscanf(input_str, "%d", &t1_gols);
-	printf("Digite quantos gols o time %s fez: ", t2->nome);
-	fgets_(input_str, 3, stdin);
-	sscanf(input_str, "%d", &t2_gols);
-
-	fora2:
-
 	resultado.estagio = NORMAL;
 	resultado.empate = false;
+
+#ifdef AUTO 
+	t1_gols = rand() % 5;
+	t2_gols = rand() % 5;
+	if (t1_gols == t2_gols) {
+		if (fase != GRUPOS) {
+			id_vencedor = rand() % 2 == 1 ? t1->id : t2->id;
+			resultado.estagio = PENALTY;
+		} else {
+			resultado.empate = true;
+		}
+	}
+#endif
+
+#ifndef AUTO
+	printf("Time \e[1;33m%s\e[0m vs \e[1;33m%s\e[0m\n\n", t1->nome, t2->nome);
+	printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t1->nome);
+
+	bold_yellow();
+	fgets_(input_str, 3, stdin);
+	sscanf(input_str, "%d", &t1_gols);
+	reset();
+
+	printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t2->nome);
+	bold_yellow();
+	fgets_(input_str, 3, stdin);
+	reset();
+	sscanf(input_str, "%d", &t2_gols);
+#endif
+
 	t1->gols += t1_gols;
 	t2->gols += t2_gols;
 	t1->gols_sofridos += t2_gols;
 	t2->gols_sofridos += t1_gols;
 
-	if (t1_gols > t2_gols)
+	if (t1_gols > t2_gols) {
 		id_vencedor = t1->id;
-	else if (t2_gols > t1_gols)
+	} else if (t2_gols > t1_gols) {
 		id_vencedor = t2->id;
-	else if (fase != GRUPOS) {
+	} else if (fase != GRUPOS && !resultado.empate && resultado.estagio == NORMAL) {
 		char buff_str[MAX_NAME_LEN + 1];
 		resultado.estagio = PENALTY;
-		printf("Os times empataram, digite quem foi o vencedor dos penaltys: %s ou %s:\n", t1->nome, t2->nome);
+		printf("Os times empataram, digite quem foi o vencedor dos penaltys:"
+		       " \e[1;33m%s\e[0m ou \e[1;33m%s\e[0m:\n", t1->nome, t2->nome);
 		for (;;) {
+			bold_yellow();
 			fgets_(buff_str, MAX_NAME_LEN, stdin);
+			reset();
 			if (strcmp(t1->nome, buff_str) == 0)
 				id_vencedor = t1->id;
 			else if (strcmp(t2->nome, buff_str) == 0)
 				id_vencedor = t2->id;
 			else {
-				printf("O nome que você digitou não é válido, digite denovo: %s ou %s\n", t1->nome, t2->nome);
+				red();
+				limpar_tela();
+				printf("O nome que você digitou não é válido, digite denovo:"
+					" \e[1;33m%s\e[0m ou \e[1;33m%s\e[0m\n", t1->nome, t2->nome);
+				bold_yellow();
+				sleep(1);
+				reset();
+				limpar_tela();
 				continue;
 			}
 			break;
 		}
-	}
-
+	} 
 
 	if (id_vencedor == t1->id) {
 		set_resultado(t1, t2, &resultado, t1_gols, t2_gols, fase);
@@ -654,8 +737,10 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   	char input_str[5];
 
   	printf("Digite quantos times deseja cadastrar, %d disponíveis: ", n_disponiveis);
+	bold_yellow();
   	fgets_(input_str, 4, stdin);
 	sscanf(input_str, "%d", &n_a_cadastrar);
+	reset();
   	if (n_a_cadastrar == 0)
   		return;
   	if (n_a_cadastrar > n_disponiveis) {
@@ -667,10 +752,12 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   	int abertos = 0;
 
   	printf("Deseja consultar a lista de times (S/n)?  ");
+	bold_yellow();
   	if (confirmar_resposta()) {
   		if ((abertos = abrir_lista(lista, MAX_LISTA_LEN, "lista.txt")) == 0)
   			puts("Lista não pôde ser aberta.");
   	}
+	reset();
 
   	for (int i = 0; i < n_a_cadastrar; ++i) {
   		char buff[MAX_NAME_LEN + 1];
@@ -679,16 +766,21 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   			limpar_tela();
   			exibir_lista_times(lista, grupos, *times_cadastrados, abertos);
   			if (i > 0)
-  				printf("\nVoc? selecionou %s\n", buff);
+  				printf("\nVocê selecionou \e[1;33m%s\e[0m\n", buff);
   			printf("\nDigite um dos ids acima ou dê um nome para o %d° time: ", *times_cadastrados + 1);
+			bold_yellow();
   			fgets_(buff, MAX_NAME_LEN, stdin);
+			reset();
   			if (!obter_nome_por_id(buff, abertos, lista))
   				continue;
   		} else {
   			printf("Digite um nome para o %d° time: ", *times_cadastrados + 1);
+			bold_yellow();
   			fgets_(buff, MAX_NAME_LEN, stdin);
+			reset();
   		}
   		if (time_repetido(buff, grupos, *times_cadastrados)) {
+			bold_red();
 			mensagem("Você já cadastrou esse time, retornando a sessão principal\n");
   			return;
   		}
@@ -698,6 +790,7 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   	if (*times_cadastrados == MAX_TIMES)
   		randomizar_times_grupos(grupos, chaves);
 
+	sleep(1);
   	limpar_tela();
 }
 
@@ -706,7 +799,7 @@ exibir_lista_times(char lista[][MAX_NAME_LEN + 1], const Time *times, int times_
 {
 	for (int i = 0; i < abertos; ++i)
 		if (!time_repetido(lista[i], times, times_cadastrados))
-			printf("%d - %s\n", i, lista[i]);
+			printf("\e[1;32m%d\e[0m - \e[1;34m%s\e[0m\n", i, lista[i]);
 }
 
 Id
@@ -729,6 +822,7 @@ obter_novo_id(void)
 			id_existe[id] = true;
 			return id;
 		}
+	return MAX_IDS + 1;
 }
 
 
@@ -749,6 +843,7 @@ obter_nome_por_id(char *buff, size_t  max, const char lista[][MAX_NAME_LEN + 1])
 	if ((id = meu_atoi(buff)) == EOF)
 		return true;
 	if (id < 0 || id >= max) {
+		red();
 		mensagem("id inválido\n");
 		return false;
 	}
@@ -764,26 +859,40 @@ confirmar_resposta(void)
 		continue;
 	while (getchar() != '\n')
 		continue;
-	if (tolower(op) == 's')
-		return true;
-	else
-		return false;
+
+	return tolower(op) == 's';
 }
 
 void
 limpar_tela(void)
 {
-    #ifdef WIN32
-    system("cls");
-    #elif defined __linux__
-    system("clear");
-    #endif
+#ifdef WIN32
+	system("cls");
+#elif defined __linux__
+	system("clear");
+#endif
 }
 
 void mensagem(char *msg)
 {
 	limpar_tela();
 	printf("%s", msg);
+	bold_yellow();
 	sleep(1);
+	reset();
 	limpar_tela();
+}
+
+void insertion_sort(Time *times, size_t size)
+{
+	for (int i = 0; i < size - 1; ++i) {
+		int j = i;
+		Time elemento = times[j + 1];
+
+		while (j >= 0 && compara_ranque(&elemento, &times[j]) < 0) {
+			times[j + 1] = times[j];
+			--j;
+		}
+		times[j + 1] = elemento;
+	}
 }
