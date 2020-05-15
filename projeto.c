@@ -43,6 +43,7 @@ bool time_repetido(const char *nome, const Time *times, int times_cadastrados);
 bool obter_nome_por_id(char *buff, size_t max, const char lista[][MAX_NAME_LEN + 1]);
 bool confirmar_resposta(void);
 void limpar_tela(void);
+void sair_menu(void);
 void mensagem(char *msg);
 
 int
@@ -318,11 +319,7 @@ visualizar_grupos(Jogo *jogos, const Info *copa, Time *grupos)
 		}
 	}
 
-	puts("Digite sair para voltar ao menu principal");
-	bold_yellow();
-	while (!confirmar_resposta())
-		continue;
-	reset();
+	sair_menu();
 	limpar_tela();
 }
 
@@ -355,12 +352,7 @@ visualizar_ranque(const Time *times, const Info *copa)
 		     "Nenhum time foi classificado para as oitavas ainda\n");
 	reset();
 
-	printf("Digite sair para voltar ao menu principal:  ");
-	bold_yellow();
-	while (!confirmar_resposta())
-		continue;
-	reset();
-	limpar_tela();
+	sair_menu();
 }
 
 void
@@ -406,12 +398,7 @@ visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lis
 		puts("\n                                                        Nenhum jogo foi Realizado ainda");
 	reset();
 
-	printf("\nDigite sair para voltar ao menu principal:  ");
-	bold_yellow();
-	while (!confirmar_resposta())
-		continue;
-	reset();
-	limpar_tela();
+	sair_menu();	
 }
 
 void
@@ -427,11 +414,7 @@ marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
 	data = copa->ultima_data;
 	update_data(&data);
 	strcpy(jogos[copa->jogos_realizados].local, estadios[rand() % 12]);
-#endif
-
-
-
-#ifndef AUTO
+#else
 	for (;;) {
 		char input_str[10];
 
@@ -574,9 +557,7 @@ jogar_jogo(Time *t1, Time *t2, Fase fase)
 			resultado.empate = true;
 		}
 	}
-#endif
-
-#ifndef AUTO
+#else
 	printf("Time \e[1;33m%s\e[0m vs \e[1;33m%s\e[0m\n\n", t1->nome, t2->nome);
 	printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t1->nome);
 
@@ -781,8 +762,7 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   	if (*times_cadastrados == MAX_TIMES)
   		randomizar_times_grupos(grupos, chaves);
 
-	sleep(1);
-  	limpar_tela();
+	sair_menu();
 }
 
 void
@@ -870,6 +850,16 @@ void mensagem(char *msg)
 	printf("%s", msg);
 	bold_yellow();
 	sleep(1);
+	reset();
+	limpar_tela();
+}
+
+void sair_menu(void)
+{
+	printf("Digite sair para voltar ao menu principal\n");
+	bold_yellow();
+	while (!confirmar_resposta())
+		;
 	reset();
 	limpar_tela();
 }
