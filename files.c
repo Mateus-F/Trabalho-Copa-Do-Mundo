@@ -9,24 +9,24 @@ int
 abrir_lista(char lista[][MAX_NAME_LEN + 1], size_t size, char *filename)
 {
 	FILE *file = fopen(filename, "r");
-
-    if (file == NULL) {
-    	fprintf(stderr, "O arquivo não pôde ser aberto\n");
-        return 0;
-    }
 	
-    int i = 0;
-    char buff[MAX_NAME_LEN + 1];
+	if (file == NULL) {
+    		fprintf(stderr, "O arquivo não pôde ser aberto\n");
+	        return 0;
+	}
+	
+	int i = 0;
+	char buff[MAX_NAME_LEN + 1];
 
-    while (i < size) {
-    	if (fgets_(buff, MAX_NAME_LEN, file) == NULL)
-    		break;
-        strcpy(lista[i], buff);
-        ++i;
-    }
-    fclose(file);
+    	while (i < size) {
+    		if (fgets_(buff, MAX_NAME_LEN, file) == NULL)
+    			break;
+        	strcpy(lista[i], buff);
+        	++i;
+    	}
+    	fclose(file);
 
-    return i;
+    	return i;
 }
 
 char *
