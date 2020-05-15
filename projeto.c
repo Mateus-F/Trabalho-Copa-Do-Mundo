@@ -180,11 +180,11 @@ marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves)
 		jogos[copa->jogos_realizados].resultado = jogar_jogo(t[0], t[1], fase_atual);
 		qsort(&grupos[grupo_atual], MAX_TIMES_GRUPO, sizeof(grupos[0]), qsort_ranquear_grupos);
 		if (copa->jogos_realizados >= MAX_JOGOS_GRUPOS - MAX_RANQUE_TIMES / 2) {
-			times[copa->times_classificados].id = grupos[grupo_atual].id;
-			times[copa->times_classificados + 1].id = grupos[grupo_atual + 1].id;
-			strcpy(times[copa->times_classificados].nome, grupos[grupo_atual].nome);
-			strcpy(times[copa->times_classificados + 1].nome, grupos[grupo_atual + 1].nome);
-			copa->times_classificados += 2;
+			for (int i = 0; i < MAX_TIMES_GRUPO / 2; ++i) {
+				times[copa->times_classificados + i].id = grupos[grupo_atual + i].id; 
+				strcpy(times[copa->times_classificados + i].nome, grupos[grupo_atual + i].nome);
+				++copa->times_classificados;
+			}
 		}
 		if (copa->jogos_realizados == MAX_JOGOS_GRUPOS - 1) {
 			parear_times_eliminatorias(times, chaves, &copa->jogos_pareados);
