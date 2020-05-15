@@ -386,7 +386,7 @@ visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lis
 		printf("  %-18.18s", jogos[i].local);
 
 		bold_yellow();
-		if (jogos[i].resultado.estagio >= PENALTY)
+		if (jogos[i].resultado.estagio == PENALTY)
 			printf("  Sim");
 		if (jogos[i].resultado.empate)
 			printf("  Empate");
