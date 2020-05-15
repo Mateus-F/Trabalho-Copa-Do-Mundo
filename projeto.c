@@ -385,10 +385,10 @@ visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lis
 		char *color_t1, *color_t2;
 		
 		if (jogos[i].resultado.empate) {
-			color_t1 = color_t2 = "\e[1;33m";
+			color_t1 = color_t2 = BOLD_YELLOW;
 		} else {
-			color_t1 = "\e[1;36m";
-			color_t2 = "\e[1;31m";
+			color_t1 = BOLD_CYAN;
+			color_t2 = BOLD_RED;
 		}
 
 		printf("\n   %-2d", jogos[i].id);
