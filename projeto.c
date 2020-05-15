@@ -372,16 +372,7 @@ visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lis
 	puts("   ID      Fase        Dia      Horario                 Vencedor  Placar  Perdedor                 Estádio             Penalty");
 	reset();
 
-	for (int i = 0; i < copa->jogos_realizados; ++i) {
-		if ((pesquisar_time_ptr(times_lista, jogos[i].resultado.vencedor, MAX_TIMES)) == NULL) {
-			puts("\n\n\nerror");
-			exit(1);
-		}
-		if ((pesquisar_time_ptr(times_lista, jogos[i].resultado.perdedor, MAX_TIMES)) == NULL) {
-			puts("\n\n\nerror do 2");
-			exit(1);
-		}
-		
+	for (int i = 0; i < copa->jogos_realizados; ++i) {		
 		char *color_t1, *color_t2;
 		
 		if (jogos[i].resultado.empate) {
