@@ -3,7 +3,6 @@
 #include <ctype.h>
 
 #include "files.h"
-#include "projeto.h"
 
 int
 abrir_lista(char lista[][MAX_NAME_LEN + 1], size_t size, char *filename)
