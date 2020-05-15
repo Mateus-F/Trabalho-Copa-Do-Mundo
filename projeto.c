@@ -180,11 +180,11 @@ marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves)
 		jogos[copa->jogos_realizados].resultado = jogar_jogo(t[0], t[1], fase_atual);
 		qsort(&grupos[grupo_atual], MAX_TIMES_GRUPO, sizeof(grupos[0]), qsort_ranquear_grupos);
 		if (copa->jogos_realizados >= MAX_JOGOS_GRUPOS - MAX_RANQUE_TIMES / 2) {
-			for (int i = 0; i < MAX_TIMES_GRUPO / 2; ++i) {
-				times[copa->times_classificados + i].id = grupos[grupo_atual + i].id; 
-				strcpy(times[copa->times_classificados + i].nome, grupos[grupo_atual + i].nome);
-				++copa->times_classificados;
-			}
+			times[copa->times_classificados].id = grupos[grupo_atual].id;
+			times[copa->times_classificados + 1].id = grupos[grupo_atual + 1].id;
+			strcpy(times[copa->times_classificados].nome, grupos[grupo_atual].nome);
+			strcpy(times[copa->times_classificados + 1].nome, grupos[grupo_atual + 1].nome);
+			copa->times_classificados += 2;
 		}
 		if (copa->jogos_realizados == MAX_JOGOS_GRUPOS - 1) {
 			parear_times_eliminatorias(times, chaves, &copa->jogos_pareados);
@@ -386,7 +386,7 @@ visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lis
 		printf("  %-18.18s", jogos[i].local);
 
 		bold_yellow();
-		if (jogos[i].resultado.estagio == PENALTY)
+		if (jogos[i].resultado.estagio >= PENALTY)
 			printf("  Sim");
 		if (jogos[i].resultado.empate)
 			printf("  Empate");
@@ -731,13 +731,15 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   	}
 	reset();
 
-  	for (int i = 0; i < n_a_cadastrar; ++i) {
+	int i = 0;
+
+	while (i < n_a_cadastrar) {
   		char buff[MAX_NAME_LEN + 1];
 
   		if (abertos > 0) {
   			limpar_tela();
   			exibir_lista_times(lista, grupos, *times_cadastrados, abertos);
-  			if (i > 0)
+  			if (i > 0 && strlen(buff) > 0)
   				printf("\nVocê selecionou \e[1;33m%s\e[0m\n", buff);
   			printf("\nDigite um dos ids acima ou dê um nome para o %d° time: ", *times_cadastrados + 1);
 			bold_yellow();
@@ -751,12 +753,15 @@ cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
   			fgets_(buff, MAX_NAME_LEN, stdin);
 			reset();
   		}
+		if (strlen(buff) == 0)
+			continue;;
   		if (time_repetido(buff, grupos, *times_cadastrados)) {
 			bold_red();
 			mensagem("Você já cadastrou esse time, retornando a sessão principal\n");
   			return;
   		}
   		strcpy(grupos[(*times_cadastrados)++].nome, buff);
+		++i;
   	}
 
   	if (*times_cadastrados == MAX_TIMES)
@@ -856,7 +861,7 @@ void mensagem(char *msg)
 
 void sair_menu(void)
 {
-	printf("Digite sair para voltar ao menu principal\n");
+	printf("\nDigite sair para voltar ao menu principal\n");
 	bold_yellow();
 	while (!confirmar_resposta())
 		;
