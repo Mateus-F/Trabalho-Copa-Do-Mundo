@@ -46,8 +46,6 @@ bool confirmar_resposta(void);
 void limpar_tela(void);
 void sair_menu(void);
 void mensagem(char *msg);
-void toupper_all(char *str);
-bool preposicao(char *str);
 
 int
 main(void)
@@ -889,36 +887,4 @@ void insertion_sort(Time *times, size_t size)
 		}
 		times[j + 1] = time;
 	}
-}
-
-void 
-toupper_all(char *str)
-{
-	bool out = true;
-
-	while (*str != '\0') {
-		if (isalpha(*str)) {
-			if (out && !preposicao(str))
-				*str = toupper(*str);
-			out = false;
-		} else {
-			out = true;
-		}
-		++str;
-	}
-}
-
-bool 
-preposicao(char *str)
-{
-	int count = 0;
-
-	while (isalpha(*str)) {
-		if (count == 0 && *str != 'd')
-			return false;
-		++count;
-		++str;
-	}
-	
-	return count == 2;
 }
