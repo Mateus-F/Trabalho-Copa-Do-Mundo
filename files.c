@@ -3,6 +3,7 @@
 #include <ctype.h>
 
 #include "files.h"
+#include "projeto.h"
 
 int
 abrir_lista(char lista[][MAX_NAME_LEN + 1], size_t size, char *filename)
@@ -57,4 +58,36 @@ meu_atoi(const char *str)
 		++str;
 	}
 	return numero;
+}
+
+void 
+toupper_all(char *str)
+{
+	bool out = true;
+
+	while (*str != '\0') {
+		if (isalpha(*str)) {
+			if (out && !preposicao(str))
+				*str = toupper(*str);
+			out = false;
+		} else {
+			out = true;
+		}
+		++str;
+	}
+}
+
+bool 
+preposicao(char *str)
+{
+	int count = 0;
+
+	while (isalpha(*str)) {
+		if (count == 0 && *str != 'd')
+			return false;
+		++count;
+		++str;
+	}
+	
+	return count == 2;
 }
