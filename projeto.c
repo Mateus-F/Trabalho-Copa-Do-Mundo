@@ -14,9 +14,9 @@
 int obter_time_grupos(Time *t[], Time *grupos, Chave *chaves, int jogos_realizados);
 void obter_time_copa(Time *t[], Time *times, Fase fase_atual, Chave *chaves,
                      int jogos_realizados);
-void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves);
+void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave **chaves);
 void swap_pelo_terceiro(Time *times);
-void parear_times_eliminatorias(Time *times, Chave *chaves, int *jogos_pareados);
+void parear_times_eliminatorias(Time *times, Chave **chaves, int *jogos_pareados);
 int dias_mes(int mes);
 void update_data(Horario *data);
 int qsort_ranquear_grupos(const void *p, const void *q);
@@ -51,9 +51,9 @@ int main(void)
 {
     setlocale(LC_ALL, "Portuguese");
 
-    Time times[MAX_RANQUE_TIMES];
-    Time grupos[MAX_TIMES];
-    Chave chaves[MAX_JOGOS_GRUPOS];
+    Time *times= malloc(sizeof(Time) * MAX_RANQUE_TIMES);
+    Time *grupos= malloc(sizeof(Time) * MAX_TIMES);
+    Chave *chaves = malloc(MAX_JOGOS_GRUPOS * sizeof(Chave));
 
     Info copa = {0, 0, 0, {1, 1, 12, 30}}; Jogo jogos[MAX_JOGOS];
 
@@ -121,9 +121,12 @@ int main(void)
             visualizar_grupos(jogos, &copa, grupos);
             break;
         case 5:
-            marcar_jogo(times, grupos, &copa, jogos, chaves);
+            marcar_jogo(times, grupos, &copa, jogos, &chaves);
             break;
         case 6:
+            free(grupos);
+            free(times);
+            free(chaves);
             exit(EXIT_SUCCESS);
             break;
         default:
@@ -156,7 +159,7 @@ void obter_time_copa(Time *t[], Time *times, Fase fase_atual, Chave *chaves, int
     t[1] = pesquisar_time_ptr(times, chaves[jogos_eliminatorias].t2, MAX_RANQUE_TIMES);
 }
 
-void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chaves)
+void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave **chaves)
 {
     if (copa->jogos_realizados == MAX_JOGOS) {
         mensagem("A copa já terminou\n");
@@ -175,7 +178,7 @@ void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chav
     int grupo_atual;
 
     if (fase_atual == GRUPOS) { 
-        grupo_atual = obter_time_grupos(t, grupos, chaves, copa->jogos_realizados);
+        grupo_atual = obter_time_grupos(t, grupos, *chaves, copa->jogos_realizados);
         jogos[copa->jogos_realizados].resultado = jogar_jogo(t[0], t[1], fase_atual);
         qsort(&grupos[grupo_atual], MAX_TIMES_GRUPO, sizeof(grupos[0]), qsort_ranquear_grupos);
 
@@ -188,7 +191,7 @@ void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chav
         if (copa->jogos_realizados == MAX_JOGOS_GRUPOS - 1) 
             parear_times_eliminatorias(times, chaves, &copa->jogos_pareados);
     } else { 
-        obter_time_copa(t, times, fase_atual, chaves, copa->jogos_realizados);
+        obter_time_copa(t, times, fase_atual, *chaves, copa->jogos_realizados);
         jogos[copa->jogos_realizados].resultado = jogar_jogo(t[0], t[1], fase_atual);
         if (fase_atual == PELO_TERCEIRO) 
             swap_pelo_terceiro(times);
@@ -197,13 +200,13 @@ void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave *chav
 
         if (fase_atual == FINAL) {
             times[TERCEIRO].status = times[QUARTO].status = PENDENTE;
-            chaves[copa->jogos_pareados].t1 = times[TERCEIRO].id;
-            chaves[copa->jogos_pareados++].t2 = times[QUARTO].id;
+            (*chaves)[copa->jogos_pareados].t1 = times[TERCEIRO].id;
+            (*chaves)[copa->jogos_pareados++].t2 = times[QUARTO].id;
         }
     }
 
     marcar_jogo_dados(copa, jogos, fase_atual);
-    checar_transicao_proxima_fase(times, copa, chaves);
+    checar_transicao_proxima_fase(times, copa, *chaves);
     copa->jogos_realizados++;
 }
 
@@ -226,11 +229,14 @@ void swap_pelo_terceiro(Time *times)
     }
 }
 
-void parear_times_eliminatorias(Time *times, Chave *chaves, int *jogos_pareados)
+void parear_times_eliminatorias(Time *times, Chave **chaves, int *jogos_pareados)
 {
     int j = 0;
     Time tmp[MAX_RANQUE_TIMES];
     int chave = 0;
+
+    free(*chaves);
+    *chaves = malloc(sizeof(Chave) * (MAX_JOGOS - MAX_JOGOS_GRUPOS));
 
     for (int i = 0; i < MAX_RANQUE_TIMES; ++i) 
         tmp[i] = times[i];
@@ -241,8 +247,8 @@ void parear_times_eliminatorias(Time *times, Chave *chaves, int *jogos_pareados)
     }
 
     for (int i = 0; i < MAX_RANQUE_TIMES; i += 2) {
-        chaves[chave].t1 = times[i].id;
-        chaves[chave].t2 = times[i + 1].id;
+        (*chaves)[chave].t1 = times[i].id;
+        (*chaves)[chave].t2 = times[i + 1].id;
         ++chave;
     }
     *jogos_pareados = chave;
