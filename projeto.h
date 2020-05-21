@@ -10,7 +10,6 @@
 #define MAX_JOGOS_GRUPOS 48
 #define MAX_JOGOS 64
 #define MAX_NAME_LEN 30
-#define MAX_GOLS 18
 #define MAX_IDS 100
 #define MAX_FASES 6
 #define TERCEIRO 2
@@ -20,7 +19,7 @@
 typedef int Id;
 
 typedef enum Status {ELIMINADO, PENDENTE, PASSOU, CAMPEAO} Status;
-typedef enum Estagio {NORMAL, PRORROGACAO, PENALTY} Estagio;
+typedef enum Estagio {NORMAL, DEBUG, PENALTY} Estagio;
 typedef enum Fase {GRUPOS, OITAVAS, QUARTAS, SEMI, FINAL, PELO_TERCEIRO, FIM} Fase;
 
 typedef struct Horario {
@@ -51,7 +50,7 @@ typedef struct Time {
 } Time;
 
 typedef struct Placar {
-	int vencedor;
+	Id vencedor;
 	Id perdedor;
 } Placar;
 
@@ -67,7 +66,7 @@ typedef struct Jogo {
 	Horario data;
 	Fase fase;
 	Resultado resultado;
-        Id id;
+    Id id;
 	char local[MAX_NAME_LEN + 1];
 } Jogo;
 
@@ -76,4 +75,4 @@ typedef struct Chave {
 	Id t2;
 } Chave;
 
-#endif
+#endif /* PROJETO_H */
