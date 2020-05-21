@@ -54,8 +54,8 @@ int main(void)
     Time *times= malloc(sizeof(Time) * MAX_RANQUE_TIMES);
     Time *grupos= malloc(sizeof(Time) * MAX_TIMES);
     Chave *chaves = malloc(MAX_JOGOS_GRUPOS * sizeof(Chave));
-
-    Info copa = {0, 0, 0, {1, 1, 12, 30}}; Jogo jogos[MAX_JOGOS];
+    Jogo *jogos = malloc(sizeof(Jogo) * MAX_JOGOS);
+    Info copa = {0, 0, 0, {1, 1, 12, 30}}; 
 
     srand((unsigned)time(NULL));
     limpar_tela();
@@ -127,6 +127,7 @@ int main(void)
             free(grupos);
             free(times);
             free(chaves);
+            free(jogos);
             exit(EXIT_SUCCESS);
             break;
         default:
@@ -235,8 +236,7 @@ void parear_times_eliminatorias(Time *times, Chave **chaves, int *jogos_pareados
     Time tmp[MAX_RANQUE_TIMES];
     int chave = 0;
 
-    free(*chaves);
-    *chaves = malloc(sizeof(Chave) * (MAX_JOGOS - MAX_JOGOS_GRUPOS));
+    *chaves = realloc(*chaves, sizeof(Chave) * (MAX_JOGOS - MAX_JOGOS_GRUPOS));
 
     for (int i = 0; i < MAX_RANQUE_TIMES; ++i) 
         tmp[i] = times[i];
@@ -464,12 +464,12 @@ void update_data(Horario *data)
     int dias_mes_data = dias_mes(data->mes);
     const int minutos[6] = {10, 15, 20, 25, 30, 45};
 
+    data->dia += rand() % 3 + 1;
     if (data->dia > dias_mes_data) {
         data->dia -= dias_mes_data;
         ++data->mes;
     }
 
-    data->dia += rand() % 3 + 1;
     data->horas = rand() % 24;
     data->minutos = minutos[rand() % 6];
 }
