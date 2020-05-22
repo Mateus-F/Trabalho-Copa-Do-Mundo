@@ -514,7 +514,7 @@ void escolher_estadio(int jogos_realizados, char *jogo_atual_local)
     char buff[MAX_NAME_LEN + 1];
     Id id;
     char **estadios;
-    int num_estadios = abrir_lista(&estadios, MAX_LISTA_LEN, "estadios.txt");
+    int num_estadios = abrir_lista(&estadios, MAX_NAME_LEN, "estadios.txt");
 
     for (int i = 0; i < num_estadios; ++i)
         printf("\e[1;32m%d\e[0m - \e[1;34m%s\e[0m\n", i, estadios[i]);
@@ -751,7 +751,7 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
         printf("Deseja consultar a lista de times (S/n)?  ");
         bold_yellow();
         if (confirmar_resposta()) 
-            if ((abertos = abrir_lista(&lista, MAX_LISTA_LEN, "lista.txt")) == 0)
+            if ((abertos = abrir_lista(&lista, MAX_NAME_LEN, "lista.txt")) == 0)
                 puts("Lista não pôde ser aberta.");
     }
     reset();
