@@ -1,13 +1,18 @@
+
 #ifndef FILES_H
 #define FILES_H
 
-#include <stdbool.h>
+#include <stdio.h>
 
 #include "projeto.h"
 
-int abrir_lista(char lista[][MAX_NAME_LEN + 1], size_t size, char *filename);
+#define allocate(var, size) (alloc(sizeof(*var) * size))
+#define reallocate(var, size) (realloc(var, sizeof(*var) * size))
+
+int abrir_lista(char ***lista, int name_len, char *filename);
+void *alloc(size_t size);
 int meu_atoi(const char *str);
-char *fgets_(char *str, size_t size, FILE *io_stream);
+char *get_line(char *str, size_t max, FILE *stream);
 void toupper_all(char *str);
 
 #endif
