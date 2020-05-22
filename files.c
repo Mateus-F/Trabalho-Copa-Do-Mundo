@@ -34,7 +34,7 @@ int abrir_lista(char ***lista, int name_len, char *filename)
 
     *lista = reallocate(*lista, i);
 
-    return i;
+    return (*lista == NULL) ? 0 : i;
 }
 
 char *get_line(char *str, size_t size, FILE *stream)
