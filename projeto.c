@@ -11,12 +11,15 @@
 #include "files.h"
 #include "cores.h"
 
+bool automatico = false;
+
 int obter_time_grupos(Time *t[], Time *grupos, Chave *chaves, int jogos_realizados);
 void obter_time_copa(Time *t[], Time *times, Fase fase_atual, Chave *chaves,
                      int jogos_realizados);
 void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave **chaves);
 void swap_pelo_terceiro(Time *times);
 void parear_times_eliminatorias(Time *times, Chave **chaves, int *jogos_pareados);
+bool horario_valido(const Horario *data);
 int dias_mes(int mes);
 void update_data(Horario *data);
 int qsort_ranquear_grupos(const void *p, const void *q);
@@ -33,12 +36,12 @@ void checar_transicao_proxima_fase(Time *times, Info *copa, Chave *chaves);
 Resultado jogar_jogo(Time *t1, Time *t2, Fase fase);
 Time *pesquisar_time_ptr(Time *times, Id id, size_t size);
 void set_resultado(Time *vencedor, Time *perdedor, Resultado *resultado,
-                   int gols_vencedor, int gols_perdedor, Fase fase);
+        int gols_vencedor, int gols_perdedor, Fase fase);
 Fase calcular_fase(int jogo_numero);
 int comparar_data(const Horario *d1, const Horario *d2);
 void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves);
 void exibir_lista_times(char lista[][MAX_NAME_LEN + 1], const Time *times,
-                        int times_cadastrados, int abertos);
+        int times_cadastrados, int abertos);
 Id obter_novo_id(void);
 bool time_repetido(const char *nome, const Time *times, int times_cadastrados);
 bool obter_nome_por_id(char *buff, size_t max, const char lista[][MAX_NAME_LEN + 1]);
@@ -46,15 +49,18 @@ bool confirmar_resposta(void);
 void limpar_tela(void);
 void sair_menu(void);
 void mensagem(char *msg);
+int obter_gols(void);
+void easter_egg(Time *t1, Time *t2, int *gols_t1, int *gols_t2);
+void *allocate(size_t size);
 
 int main(void)
 {
     setlocale(LC_ALL, "Portuguese");
 
-    Time *times= malloc(sizeof(Time) * MAX_RANQUE_TIMES);
-    Time *grupos= malloc(sizeof(Time) * MAX_TIMES);
-    Chave *chaves = malloc(MAX_JOGOS_GRUPOS * sizeof(Chave));
-    Jogo *jogos = malloc(sizeof(Jogo) * MAX_JOGOS);
+    Time *times= allocate(sizeof(Time) * MAX_RANQUE_TIMES);
+    Time *grupos= allocate(sizeof(Time) * MAX_TIMES);
+    Chave *chaves = allocate(MAX_JOGOS_GRUPOS * sizeof(Chave));
+    Jogo *jogos = allocate(sizeof(Jogo) * MAX_JOGOS);
     Info copa = {0, 0, 0, {1, 1, 12, 30}}; 
 
     srand((unsigned)time(NULL));
@@ -65,6 +71,12 @@ int main(void)
 
     for (int i = 0; i < MAX_RANQUE_TIMES; ++i) 
         times[i] = (Time){PENDENTE, "", 0, 0, 0, 0, 0, 0, 0};
+
+    printf("Deseja realizar os jogos no automatico(S/n)? ");
+    bold_yellow();
+    if (confirmar_resposta())
+        automatico = true;
+    reset();
 
     puts("------------------------------------------------------------------------------------------------------------------------------");
     puts("                                                           Copa do Mundo");
@@ -194,6 +206,7 @@ void marcar_jogo(Time *times, Time *grupos, Info *copa, Jogo *jogos, Chave **cha
     } else { 
         obter_time_copa(t, times, fase_atual, *chaves, copa->jogos_realizados);
         jogos[copa->jogos_realizados].resultado = jogar_jogo(t[0], t[1], fase_atual);
+
         if (fase_atual == PELO_TERCEIRO) 
             swap_pelo_terceiro(times);
         else 
@@ -265,11 +278,15 @@ int qsort_ranquear_grupos(const void *p, const void *q)
         return (t2->gols - t2->gols_sofridos) - (t1->gols - t2->gols_sofridos);
 }
 
+bool horario_valido(const Horario *data)
+{
+    return data->horas >= 0 && data->horas < 24
+           && data->minutos >= 0 && data->minutos < 60;
+}
+
 bool data_valida(const Horario *data)
 {
-    return data->horas >= 0 && data->horas < 24 
-        && data->minutos >= 0 && data->minutos < 60
-        && data->mes >= 1 && data->mes <= 12 
+        return data->mes >= 1 && data->mes <= 12 
         && data->dia >= 1 && data->dia <= dias_mes(data->mes);
 }
 
@@ -410,47 +427,52 @@ void marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
     Jogo *jogo_atual = &jogos[copa->jogos_realizados];
     Horario data;
 
-#ifdef AUTO
-    char *estadios[12] = {"Arena", "Maracana", "Mane Garrincha", "Morumbi",
-        "Castelao", "Mineirao", "Arruda", "Alena do Gremio",
-        "Parque do Sabia", "Albertao", "Beira-Rio", "Mangueirao"};
+    if (automatico) {
+        char *estadios[12] = {"Arena", "Maracana", "Mane Garrincha", "Morumbi",
+            "Castelao", "Mineirao", "Arruda", "Alena do Gremio",
+            "Parque do Sabia", "Albertao", "Beira-Rio", "Mangueirao"};
 
-    data = copa->ultima_data;
-    update_data(&data);
-    strcpy(jogos[copa->jogos_realizados].local, estadios[rand() % 12]);
-#else
-    for (;;) {
-        char input_str[10];
+        data = copa->ultima_data;
+        update_data(&data);
+        strcpy(jogos[copa->jogos_realizados].local, estadios[rand() % 12]);
+    } else {
+        for (;;) {
+            char input_str[10];
 
-        printf("Escolha a data em que deseja fazer o jogo (dd/mm): ");
-        bold_yellow();
-        fgets_(input_str, 9, stdin);
-        sscanf(input_str,"%d /%d", &data.dia, &data.mes);
-        reset();
-        printf("Escolha o horário em que o jogo aconteceu (hh:mm): ");
-        bold_yellow();
-        fgets_(input_str, 9, stdin);
-        sscanf(input_str, "%2d :%2d", &data.horas, &data.minutos);
-        reset();
-        if (!data_valida(&data)) {
-            red();
-            mensagem("Essa data não é válida\n");
-            continue;
+            printf("Escolha a data em que deseja fazer o jogo (dd/mm): ");
+            bold_yellow();
+            fgets_(input_str, 9, stdin);
+            sscanf(input_str,"%d /%d", &data.dia, &data.mes);
+            reset();
+            if (!data_valida(&data)) {
+                red();
+                mensagem("Essa data não é válida\n");
+                continue;
+            }
+            printf("Escolha o horário em que o jogo aconteceu (hh:mm): ");
+            bold_yellow();
+            fgets_(input_str, 9, stdin);
+            sscanf(input_str, "%2d :%2d", &data.horas, &data.minutos);
+            reset();
+            if (!horario_valido(&data)) {
+                red();
+                mensagem("Esse Horário não é valido\n");
+                continue;
+            }
+
+            int horas_diferenca = comparar_data(&copa->ultima_data, &data);
+
+            if (copa->jogos_realizados > 0 && 
+                    (horas_diferenca >= 0 || abs(horas_diferenca) <= 12)) {
+                red();
+                mensagem("Essa data já passou ou está muito próxima do último jogo\n");
+                continue;
+            }
+            break;
         }
 
-        int horas_diferenca = comparar_data(&copa->ultima_data, &data);
-
-        if (copa->jogos_realizados > 0 && 
-                (horas_diferenca >= 0 || abs(horas_diferenca) <= 12)) {
-            red();
-            mensagem("Essa data já passou ou está muito próxima do último jogo\n");
-            continue;
-        }
-        break;
+        escolher_estadio(copa->jogos_realizados, jogo_atual->local);
     }
-
-    escolher_estadio(copa->jogos_realizados, jogo_atual->local);
-#endif
 
     copa->ultima_data = data;
     jogo_atual->data = data;
@@ -511,7 +533,6 @@ void escolher_estadio(int jogos_realizados, char *jogo_atual_local)
 
     strcpy(jogo_atual_local, buff);
     reset();
-
 }
 
 void checar_transicao_proxima_fase(Time *times, Info *copa, Chave *chaves)
@@ -541,32 +562,34 @@ Resultado jogar_jogo(Time *t1, Time *t2, Fase fase)
     resultado.estagio = NORMAL;
     resultado.empate = false;
 
-#ifdef AUTO 
-    t1_gols = rand() % 5;
-    t2_gols = rand() % 5;
-    if (t1_gols == t2_gols) {
-        if (fase != GRUPOS) {
-            id_vencedor = rand() % 2 == 1 ? t1->id : t2->id;
-            resultado.estagio = PENALTY;
-        } else {
-            resultado.empate = true;
+    if (automatico) { 
+        t1_gols = obter_gols();
+        t2_gols = obter_gols();
+        if (t1_gols == t2_gols) {
+            if (fase != GRUPOS) {
+                id_vencedor = rand() % 2 == 1 ? t1->id : t2->id;
+                resultado.estagio = PENALTY;
+            } else {
+                resultado.empate = true;
+            }
         }
+        easter_egg(t1, t2, &t1_gols, &t2_gols);
+        easter_egg(t2, t1, &t2_gols, &t1_gols);
+    } else {
+        printf("Time \e[1;33m%s\e[0m vs \e[1;33m%s\e[0m\n\n", t1->nome, t2->nome);
+        printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t1->nome);
+
+        bold_yellow();
+        fgets_(input_str, 3, stdin);
+        sscanf(input_str, "%d", &t1_gols);
+        reset();
+
+        printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t2->nome);
+        bold_yellow();
+        fgets_(input_str, 3, stdin);
+        reset();
+        sscanf(input_str, "%d", &t2_gols);
     }
-#else
-    printf("Time \e[1;33m%s\e[0m vs \e[1;33m%s\e[0m\n\n", t1->nome, t2->nome);
-    printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t1->nome);
-
-    bold_yellow();
-    fgets_(input_str, 3, stdin);
-    sscanf(input_str, "%d", &t1_gols);
-    reset();
-
-    printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t2->nome);
-    bold_yellow();
-    fgets_(input_str, 3, stdin);
-    reset();
-    sscanf(input_str, "%d", &t2_gols);
-#endif
 
     t1->gols += t1_gols;
     t2->gols += t2_gols;
@@ -725,21 +748,26 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
 
     int i = 0;
     char buff[MAX_NAME_LEN + 1] = "";
+    bool valido = true;
 
     while (i < n_a_cadastrar) {
         if (abertos > 0) {
             limpar_tela();
             exibir_lista_times(lista, grupos, *times_cadastrados, abertos);
-            if (buff[0] != '\0')
+            if (buff[0] != '\0' && valido)
                 printf("\nVocê selecionou \e[1;33m%s\e[0m\n", buff);
             printf("\nDigite um dos ids acima ou dê um nome para o %d° time: ", *times_cadastrados + 1);
             bold_yellow();
             fgets_(buff, MAX_NAME_LEN, stdin);
             reset();
-            if (!obter_nome_por_id(buff, abertos, lista))
+            if (!obter_nome_por_id(buff, abertos, lista)) {
+                valido = false;
                 continue;
+            }
         } else {
             limpar_tela();
+            if (buff[0] != '\0')
+                printf("\nVocê cadastrou \e[1;33m%s\e[0m\n", buff);
             printf("Digite um nome para o %d° time: ", *times_cadastrados + 1);
             bold_yellow();
             fgets_(buff, MAX_NAME_LEN, stdin);
@@ -754,6 +782,7 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
             continue;
         }
         strcpy(grupos[(*times_cadastrados)++].nome, buff);
+        valido = true;
         ++i;
     }
 
@@ -789,8 +818,6 @@ Id obter_novo_id(void)
             id_existe[id] = true;
             return id;
         }
-
-    return MAX_IDS + 1;
 }
 
 
@@ -871,3 +898,35 @@ void insertion_sort(Time *times, size_t size)
     }
 }
 
+int obter_gols(void)
+{
+    int gols = rand() % 20;
+    if (gols > 10)
+        gols = rand() % gols;
+    if (gols > 6)
+        gols = rand() % gols;
+    if (gols > 3)
+        gols = rand() % gols;
+    return gols;
+}
+
+void *allocate(size_t size)
+{
+    void *new = malloc(size);
+    if (new == NULL) {
+        fprintf(stderr, "Não há memória suficiente\n");
+        exit(EXIT_FAILURE);
+    }
+    return new;
+}
+
+void easter_egg(Time *t1, Time *t2, int *gols_t1, int *gols_t2)
+{
+    static bool completed = false;
+
+    if (strcmp(t1->nome, "Alemanha") == 0 && strcmp(t2->nome, "Brasil") == 0 && !completed) {
+        *gols_t1 = 7;
+        *gols_t2 = 1;
+        completed = true;
+    }
+}
