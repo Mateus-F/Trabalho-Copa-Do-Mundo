@@ -4,8 +4,6 @@
 
 #include <stdio.h>
 
-#include "projeto.h"
-
 #define allocate(var, size) (alloc(sizeof(*var) * size))
 #define reallocate(var, size) (realloc(var, sizeof(*var) * size))
 
