@@ -14,7 +14,6 @@
 #define MAX_FASES 6
 #define TERCEIRO 2
 #define QUARTO 3
-#define MAX_LISTA_LEN 100
 
 typedef int Id;
 
