@@ -26,7 +26,7 @@ int qsort_ranquear_grupos(const void *p, const void *q);
 int compara_ranque(const Time *t1, const Time *t2);
 void insertion_sort(Time *times, size_t size);
 bool data_valida(const Horario *data);
-void randomizar_times_grupos(Time *grupos, Chave *chaves);
+void nandomizar_times_grupos(Time *grupos, Chave *chaves);
 void visualizar_grupos(Jogo *jogos, const Info *copa, Time *grupos);
 void visualizar_jogos_realizados(const Jogo *jogos, const Info *copa, Time *times_lista);
 void visualizar_ranque(const Time *times, const Info *copa);
@@ -36,31 +36,32 @@ void checar_transicao_proxima_fase(Time *times, Info *copa, Chave *chaves);
 Resultado jogar_jogo(Time *t1, Time *t2, Fase fase);
 Time *pesquisar_time_ptr(Time *times, Id id, size_t size);
 void set_resultado(Time *vencedor, Time *perdedor, Resultado *resultado,
-        int gols_vencedor, int gols_perdedor, Fase fase);
+                   int gols_vencedor, int gols_perdedor, Fase fase);
+void set_empate(Time *t1, Time *t2, Resultado *resultado, int gols_t1,
+                int gols_t2);
 Fase calcular_fase(int jogo_numero);
 int comparar_data(const Horario *d1, const Horario *d2);
 void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves);
-void exibir_lista_times(char lista[][MAX_NAME_LEN + 1], const Time *times,
-        int times_cadastrados, int abertos);
+void exibir_lista_times(char **lista, const Time *times,
+                        int times_cadastrados, int abertos);
 Id obter_novo_id(void);
 bool time_repetido(const char *nome, const Time *times, int times_cadastrados);
-bool obter_nome_por_id(char *buff, size_t max, const char lista[][MAX_NAME_LEN + 1]);
+bool obter_nome_por_id(char *buff, size_t max, char **lista);
 bool confirmar_resposta(void);
 void limpar_tela(void);
 void sair_menu(void);
 void mensagem(char *msg);
 int obter_gols(void);
 void easter_egg(Time *t1, Time *t2, int *gols_t1, int *gols_t2);
-void *allocate(size_t size);
 
 int main(void)
 {
     setlocale(LC_ALL, "Portuguese");
 
-    Time *times= allocate(sizeof(Time) * MAX_RANQUE_TIMES);
-    Time *grupos= allocate(sizeof(Time) * MAX_TIMES);
-    Chave *chaves = allocate(MAX_JOGOS_GRUPOS * sizeof(Chave));
-    Jogo *jogos = allocate(sizeof(Jogo) * MAX_JOGOS);
+    Time *times= allocate(times, MAX_RANQUE_TIMES);
+    Time *grupos= allocate(grupos, MAX_TIMES);
+    Chave *chaves = allocate(chaves, MAX_JOGOS_GRUPOS);
+    Jogo *jogos = allocate(jogos, MAX_JOGOS);
     Info copa = {0, 0, 0, {1, 1, 12, 30}}; 
 
     srand((unsigned)time(NULL));
@@ -77,10 +78,13 @@ int main(void)
     if (confirmar_resposta())
         automatico = true;
     reset();
+    limpar_tela();
 
-    puts("------------------------------------------------------------------------------------------------------------------------------");
+    puts("---------------------------------------------------------------"
+         "---------------------------------------------------------------");
     puts("                                                           Copa do Mundo");
-    puts("------------------------------------------------------------------------------------------------------------------------------");
+    puts("---------------------------------------------------------------"
+         "---------------------------------------------------------------");
 
     for (;;) {
         if (copa.times_cadastrados == MAX_TIMES) 
@@ -114,7 +118,7 @@ int main(void)
         int op;
 
         bold_yellow();
-        fgets_(input_str, 2, stdin);
+        get_line(input_str, 2, stdin);
         sscanf(input_str, "%d", &op);
         reset();
         limpar_tela();
@@ -249,7 +253,7 @@ void parear_times_eliminatorias(Time *times, Chave **chaves, int *jogos_pareados
     Time tmp[MAX_RANQUE_TIMES];
     int chave = 0;
 
-    *chaves = realloc(*chaves, sizeof(Chave) * (MAX_JOGOS - MAX_JOGOS_GRUPOS));
+    *chaves = reallocate(*chaves, (MAX_JOGOS - MAX_JOGOS_GRUPOS));
 
     for (int i = 0; i < MAX_RANQUE_TIMES; ++i) 
         tmp[i] = times[i];
@@ -264,6 +268,7 @@ void parear_times_eliminatorias(Time *times, Chave **chaves, int *jogos_pareados
         (*chaves)[chave].t2 = times[i + 1].id;
         ++chave;
     }
+
     *jogos_pareados = chave;
 }
 
@@ -273,9 +278,9 @@ int qsort_ranquear_grupos(const void *p, const void *q)
     const Time *t2 = q;
 
     if (t1->pontos != t2->pontos)
-        return t2->pontos - t1->pontos;
+        return (t2->pontos - t1->pontos);
     else
-        return (t2->gols - t2->gols_sofridos) - (t1->gols - t2->gols_sofridos);
+        return (t2->gols - t2->gols_sofridos) - (t1->gols - t1->gols_sofridos);
 }
 
 bool horario_valido(const Horario *data)
@@ -441,7 +446,7 @@ void marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
 
             printf("Escolha a data em que deseja fazer o jogo (dd/mm): ");
             bold_yellow();
-            fgets_(input_str, 9, stdin);
+            get_line(input_str, 9, stdin);
             sscanf(input_str,"%d /%d", &data.dia, &data.mes);
             reset();
             if (!data_valida(&data)) {
@@ -451,7 +456,7 @@ void marcar_jogo_dados(Info *copa, Jogo *jogos, Fase fase)
             }
             printf("Escolha o horário em que o jogo aconteceu (hh:mm): ");
             bold_yellow();
-            fgets_(input_str, 9, stdin);
+            get_line(input_str, 9, stdin);
             sscanf(input_str, "%2d :%2d", &data.horas, &data.minutos);
             reset();
             if (!horario_valido(&data)) {
@@ -508,8 +513,8 @@ void escolher_estadio(int jogos_realizados, char *jogo_atual_local)
 {
     char buff[MAX_NAME_LEN + 1];
     Id id;
-    char estadios[MAX_LISTA_LEN][MAX_NAME_LEN + 1];
-    int num_estadios = abrir_lista(estadios, MAX_LISTA_LEN, "estadios.txt");
+    char **estadios;
+    int num_estadios = abrir_lista(&estadios, MAX_LISTA_LEN, "estadios.txt");
 
     for (int i = 0; i < num_estadios; ++i)
         printf("\e[1;32m%d\e[0m - \e[1;34m%s\e[0m\n", i, estadios[i]);
@@ -518,14 +523,14 @@ void escolher_estadio(int jogos_realizados, char *jogo_atual_local)
         if (num_estadios > 0) {
             printf("Digite um nome de estádio ou digite um dos ids acima: ");
             bold_yellow();
-            fgets_(buff, MAX_NAME_LEN, stdin);
+            get_line(buff, MAX_NAME_LEN, stdin);
             reset();
             if (!obter_nome_por_id(buff, num_estadios, estadios))
                 continue;
         } else {
             printf("Digite o nome do estádio: ");
             bold_yellow();
-            fgets_(buff, MAX_NAME_LEN, stdin);
+            get_line(buff, MAX_NAME_LEN, stdin);
             reset();
         }
         break;
@@ -580,13 +585,13 @@ Resultado jogar_jogo(Time *t1, Time *t2, Fase fase)
         printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t1->nome);
 
         bold_yellow();
-        fgets_(input_str, 3, stdin);
+        get_line(input_str, 3, stdin);
         sscanf(input_str, "%d", &t1_gols);
         reset();
 
         printf("Digite quantos gols o time \e[1;33m%s\e[0m fez: ", t2->nome);
         bold_yellow();
-        fgets_(input_str, 3, stdin);
+        get_line(input_str, 3, stdin);
         reset();
         sscanf(input_str, "%d", &t2_gols);
     }
@@ -600,7 +605,7 @@ Resultado jogar_jogo(Time *t1, Time *t2, Fase fase)
         id_vencedor = t1->id;
     } else if (t2_gols > t1_gols) {
         id_vencedor = t2->id;
-    } else if (fase != GRUPOS && !resultado.empate && resultado.estagio == NORMAL) {
+    } else if (fase != GRUPOS && !automatico) {
         char buff_str[MAX_NAME_LEN + 1];
 
         resultado.estagio = PENALTY;
@@ -608,7 +613,7 @@ Resultado jogar_jogo(Time *t1, Time *t2, Fase fase)
                 " \e[1;33m%s\e[0m ou \e[1;33m%s\e[0m:\n", t1->nome, t2->nome);
         for (;;) {
             bold_yellow();
-            fgets_(buff_str, MAX_NAME_LEN, stdin);
+            get_line(buff_str, MAX_NAME_LEN, stdin);
             reset();
             if (strcmp(t1->nome, buff_str) == 0)
                 id_vencedor = t1->id;
@@ -629,25 +634,30 @@ Resultado jogar_jogo(Time *t1, Time *t2, Fase fase)
         }
     } 
 
-    if (id_vencedor == t1->id) {
+    if (id_vencedor == t1->id) 
         set_resultado(t1, t2, &resultado, t1_gols, t2_gols, fase);
-    } else if (id_vencedor == t2->id) {
+    else if (id_vencedor == t2->id) 
         set_resultado(t2, t1, &resultado, t2_gols, t1_gols, fase);
-    } else {
-        ++t1->pontos;
-        ++t2->pontos;
-        ++t1->empates;
-        ++t2->empates;
-        resultado.empate = true;
-        resultado.vencedor = t1->id;
-        resultado.perdedor = t2->id;
-        resultado.placar.vencedor = t1_gols;
-        resultado.placar.perdedor = t2_gols;
-    }
+    else 
+        set_empate(t1, t2, &resultado, t1_gols, t2_gols);
+    
 
     return resultado;
 }
 
+void set_empate(Time *t1, Time *t2, Resultado *resultado, int gols_t1,
+                int gols_t2) 
+{
+        ++t1->pontos;
+        ++t2->pontos;
+        ++t1->empates;
+        ++t2->empates;
+        resultado->empate = true;
+        resultado->vencedor = t1->id;
+        resultado->perdedor = t2->id;
+        resultado->placar.vencedor = gols_t1;
+        resultado->placar.perdedor = gols_t1;
+}
 
 Time *pesquisar_time_ptr(Time *times, Id id, size_t max)
 {
@@ -724,7 +734,7 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
 
     printf("Digite quantos times deseja cadastrar, %d disponíveis: ", n_disponiveis);
     bold_yellow();
-    fgets_(input_str, 4, stdin);
+    get_line(input_str, 4, stdin);
     sscanf(input_str, "%d", &n_a_cadastrar);
     reset();
     if (n_a_cadastrar == 0)
@@ -734,14 +744,14 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
         return;
     }
 
-    static char lista[MAX_LISTA_LEN][MAX_NAME_LEN + 1];
+    static char **lista = NULL;
     static int abertos = 0;
 
     if (abertos == 0) {
         printf("Deseja consultar a lista de times (S/n)?  ");
         bold_yellow();
         if (confirmar_resposta()) 
-            if ((abertos = abrir_lista(lista, MAX_LISTA_LEN, "lista.txt")) == 0)
+            if ((abertos = abrir_lista(&lista, MAX_LISTA_LEN, "lista.txt")) == 0)
                 puts("Lista não pôde ser aberta.");
     }
     reset();
@@ -758,7 +768,7 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
                 printf("\nVocê selecionou \e[1;33m%s\e[0m\n", buff);
             printf("\nDigite um dos ids acima ou dê um nome para o %d° time: ", *times_cadastrados + 1);
             bold_yellow();
-            fgets_(buff, MAX_NAME_LEN, stdin);
+            get_line(buff, MAX_NAME_LEN, stdin);
             reset();
             if (!obter_nome_por_id(buff, abertos, lista)) {
                 valido = false;
@@ -770,7 +780,7 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
                 printf("\nVocê cadastrou \e[1;33m%s\e[0m\n", buff);
             printf("Digite um nome para o %d° time: ", *times_cadastrados + 1);
             bold_yellow();
-            fgets_(buff, MAX_NAME_LEN, stdin);
+            get_line(buff, MAX_NAME_LEN, stdin);
             reset();
         }
         if (strlen(buff) == 0)
@@ -786,13 +796,18 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
         ++i;
     }
 
-    if (*times_cadastrados == MAX_TIMES)
+    if (*times_cadastrados == MAX_TIMES) {
         randomizar_times_grupos(grupos, chaves);
+        if (lista != NULL)
+            for (int i = 0; i < abertos; ++i)
+                free(lista[i]);
+        free(lista);
+    }
 
     sair_menu();
 }
 
-void exibir_lista_times(char lista[][MAX_NAME_LEN + 1], const Time *times, int times_cadastrados, int abertos)
+void exibir_lista_times(char **lista, const Time *times, int times_cadastrados, int abertos)
 {
     for (int i = 0; i < abertos; ++i)
         if (!time_repetido(lista[i], times, times_cadastrados))
@@ -829,7 +844,7 @@ bool time_repetido(const char *nome, const Time *times, int times_cadastrados)
     return false;
 }
 
-bool obter_nome_por_id(char *buff, size_t  max, const char lista[][MAX_NAME_LEN + 1])
+bool obter_nome_por_id(char *buff, size_t max, char **lista)
 {
     Id id;
 
@@ -908,16 +923,6 @@ int obter_gols(void)
     if (gols > 3)
         gols = rand() % gols;
     return gols;
-}
-
-void *allocate(size_t size)
-{
-    void *new = malloc(size);
-    if (new == NULL) {
-        fprintf(stderr, "Não há memória suficiente\n");
-        exit(EXIT_FAILURE);
-    }
-    return new;
 }
 
 void easter_egg(Time *t1, Time *t2, int *gols_t1, int *gols_t2)
