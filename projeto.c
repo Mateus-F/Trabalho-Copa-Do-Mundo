@@ -798,9 +798,8 @@ void cadastrar_times(Time *grupos, int *times_cadastrados, Chave *chaves)
 
     if (*times_cadastrados == MAX_TIMES) {
         randomizar_times_grupos(grupos, chaves);
-        if (lista != NULL)
-            for (int i = 0; i < abertos; ++i)
-                free(lista[i]);
+        for (int i = 0; i < abertos; ++i)
+            free(lista[i]);
         free(lista);
     }
 
