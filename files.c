@@ -75,8 +75,7 @@ void toupper_all(char *str)
     }
 }
 
-static bool 
-preposicao(char *str)
+static bool preposicao(char *str)
 {
     int count = 0;
 
