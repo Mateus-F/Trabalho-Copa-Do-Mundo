@@ -1,36 +1,42 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "files.h"
-#include "projeto.h"
 
 static bool preposicao(char *str);
 
-int abrir_lista(char lista[][MAX_NAME_LEN + 1], size_t size, char *filename)
+int abrir_lista(char ***lista, int name_len, char *filename)
 {
+    int i = 0;
+    int max = 10;
+    char buff[name_len + 1];
     FILE *file = fopen(filename, "r");
 
+
     if (file == NULL) {
-        fprintf(stderr, "O arquivo não pôde ser aberto\n");
+        fprintf(stderr, "Arquivo não pôde ser aberto\n");
         return 0;
     }
 
-    int i = 0;
-    char buff[MAX_NAME_LEN + 1];
+    *lista = allocate(*lista, max);
 
-    while (i < size) {
-        if (fgets_(buff, MAX_NAME_LEN, file) == NULL)
-            break;
-        strcpy(lista[i], buff);
-        ++i;
+    while (get_line(buff, name_len, file) != NULL) {
+        (*lista)[i] = malloc(strlen(buff) + 1);
+        strcpy((*lista)[i], buff);
+        if (++i == max) {
+            max *= 2;
+            *lista = reallocate(*lista, max);
+        }
     }
-    fclose(file);
+
+    *lista = reallocate(*lista, i);
 
     return i;
 }
 
-char *fgets_(char *str, size_t size, FILE *stream)
+char *get_line(char *str, size_t size, FILE *stream)
 {
     int ch;
     unsigned i = 0;
@@ -50,11 +56,12 @@ int meu_atoi(const char *str)
         str++;
     if (!isdigit(*str))
         return EOF;
+
     int numero = 0;
-    while (isdigit(*str)) {
+
+    while (isdigit(*str++)) {
         numero *= 10;
         numero += *str - '0';
-        ++str;
     }
     return numero;
 }
@@ -67,6 +74,8 @@ void toupper_all(char *str)
         if (isalpha(*str)) {
             if (out && !preposicao(str))
                 *str = toupper(*str);
+            else 
+                *str = tolower(*str);
             out = false;
         } else {
             out = true;
@@ -80,11 +89,21 @@ static bool preposicao(char *str)
     int count = 0;
 
     while (isalpha(*str)) {
-        if (count == 0 && *str != 'd')
+        if (count == 0 && tolower(*str) != 'd')
             return false;
         ++count;
         ++str;
     }
 
     return count == 2;
+}
+
+void *alloc(size_t size)
+{
+    void *new = malloc(size);
+    if (new == NULL) {
+        fprintf(stderr, "Não há memória suficiente\n");
+        exit(EXIT_FAILURE);
+    } 
+    return new;
 }
