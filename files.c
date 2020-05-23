@@ -24,12 +24,12 @@ int abrir_lista(char ***lista, int name_len, char *filename)
     *lista = allocate(*lista, max);
 
     while (get_line(buff, name_len, file) != NULL) {
-        (*lista)[i] = malloc(strlen(buff) + 1);
-        strcpy((*lista)[i], buff);
-        if (++i == max) {
+        if (i == max) {
             max *= 2;
             *lista = reallocate(*lista, max);
         }
+        (*lista)[i] = malloc(strlen(buff) + 1);
+        strcpy((*lista)[i++], buff);
     }
 
     *lista = reallocate(*lista, i);
